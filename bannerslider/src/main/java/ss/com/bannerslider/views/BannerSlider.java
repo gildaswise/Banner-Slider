@@ -1,7 +1,9 @@
 package ss.com.bannerslider.views;
 
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -113,38 +115,40 @@ public class BannerSlider extends FrameLayout implements ViewPager.OnPageChangeL
         super.onFinishInflate();
     }
 
+    private AppCompatActivity scanForActivity(Context context) {
+        if (context == null)
+            return null;
+        else if (context instanceof AppCompatActivity)
+            return (AppCompatActivity) context;
+        else if (context instanceof ContextWrapper)
+            return scanForActivity(((ContextWrapper) context).getBaseContext());
+        return null;
+    }
+
     private void setup() {
         if (!isInEditMode()) {
             post(new Runnable() {
                 @Override
                 public void run() {
-                    if (getContext() instanceof AppCompatActivity) {
-                        hostActivity = (AppCompatActivity) getContext();
-                    } else {
-                        throw new RuntimeException("Host activity must extend AppCompatActivity");
-                    }
-                    boolean mustMakeViewPagerWrapContent = getLayoutParams().height == ViewGroup.LayoutParams.WRAP_CONTENT;
-
-                    viewPager = new CustomViewPager(getContext(),mustMakeViewPagerWrapContent);
-                    viewPager.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                    hostActivity = scanForActivity(getContext());
+                    if (hostActivity != null) {
+                        boolean mustMakeViewPagerWrapContent = getLayoutParams().height == ViewGroup.LayoutParams.WRAP_CONTENT;
+                        viewPager = new CustomViewPager(getContext(),mustMakeViewPagerWrapContent);
+                        viewPager.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                         viewPager.setId(View.generateViewId());
+                        viewPager.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                        viewPager.addOnPageChangeListener(BannerSlider.this);
+                        addView(viewPager);
+                        if (!hideIndicators) {
+                            slideIndicatorsGroup = new SlideIndicatorsGroup(getContext(), selectedSlideIndicator, unSelectedSlideIndicator, defaultIndicator, indicatorSize, mustAnimateIndicators);
+                            addView(slideIndicatorsGroup);
+                        }
+                        setupTimer();
+                        setupIsCalled = true;
+                        renderRemainingBanners();
                     } else {
-                        int id = Math.abs(new Random().nextInt((5000 - 1000) + 1) + 1000);
-                        viewPager.setId(id);
+                        throw new RuntimeException("Context is null somehow!");
                     }
-                    viewPager.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    viewPager.addOnPageChangeListener(BannerSlider.this);
-                    addView(viewPager);
-                    if (!hideIndicators) {
-                        slideIndicatorsGroup = new SlideIndicatorsGroup(getContext(), selectedSlideIndicator, unSelectedSlideIndicator, defaultIndicator, indicatorSize, mustAnimateIndicators);
-                        addView(slideIndicatorsGroup);
-                    }
-
-                    setupTimer();
-                    setupIsCalled = true;
-                    renderRemainingBanners();
                 }
             });
         }
@@ -173,24 +177,14 @@ public class BannerSlider extends FrameLayout implements ViewPager.OnPageChangeL
             }
 
             BannerAdapter bannerAdapter;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                bannerAdapter = new BannerAdapter(hostActivity.getSupportFragmentManager(), mustLoopSlides, getLayoutDirection(), banners);
-            } else {
-                bannerAdapter = new BannerAdapter(hostActivity.getSupportFragmentManager(), mustLoopSlides, banners);
-            }
-
+            bannerAdapter = new BannerAdapter(hostActivity.getSupportFragmentManager(), mustLoopSlides, getLayoutDirection(), banners);
             viewPager.setAdapter(bannerAdapter);
 
             if (mustLoopSlides) {
-                if (Build.VERSION.SDK_INT>=17){
-                    if (getLayoutDirection() == LAYOUT_DIRECTION_LTR) {
-                        viewPager.setCurrentItem(1, false);
-                        slideIndicatorsGroup.onSlideChange(0);
-                    } else {
-                        viewPager.setCurrentItem(banners.size(), false);
-                        slideIndicatorsGroup.onSlideChange(banners.size() - 1);
-                    }
-                }else {
+                if (getLayoutDirection() == LAYOUT_DIRECTION_LTR) {
+                    viewPager.setCurrentItem(1, false);
+                    slideIndicatorsGroup.onSlideChange(0);
+                } else {
                     viewPager.setCurrentItem(banners.size(), false);
                     slideIndicatorsGroup.onSlideChange(banners.size() - 1);
                 }
@@ -266,29 +260,29 @@ public class BannerSlider extends FrameLayout implements ViewPager.OnPageChangeL
             timer.schedule(new TimerTask() {
                 @Override
                 public void run() {
-                    ((AppCompatActivity) getContext()).runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (!mustLoopSlides) {
-                                if (viewPager.getCurrentItem() == banners.size() - 1) {
-                                    viewPager.setCurrentItem(0, true);
+                    AppCompatActivity activity = scanForActivity(getContext());
+                    if (activity != null) {
+                        activity.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (!mustLoopSlides) {
+                                    if (viewPager.getCurrentItem() == banners.size() - 1) {
+                                        viewPager.setCurrentItem(0, true);
+                                    } else {
+                                        viewPager.setCurrentItem(viewPager.getCurrentItem() + 1, true);
+                                    }
                                 } else {
-                                    viewPager.setCurrentItem(viewPager.getCurrentItem() + 1, true);
-                                }
-                            } else {
-
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                                     if (getLayoutDirection() == LAYOUT_DIRECTION_LTR) {
                                         viewPager.setCurrentItem(viewPager.getCurrentItem() + 1, true);
                                     } else {
                                         viewPager.setCurrentItem(viewPager.getCurrentItem() - 1, true);
                                     }
-                                } else {
-                                    viewPager.setCurrentItem(viewPager.getCurrentItem() - 1, true);
                                 }
                             }
-                        }
-                    });
+                        });
+                    } else {
+                        throw new RuntimeException("Context is null somehow!");
+                    }
                 }
             }, slideShowInterval, slideShowInterval);
         }
