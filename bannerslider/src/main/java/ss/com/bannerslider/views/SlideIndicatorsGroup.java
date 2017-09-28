@@ -67,26 +67,10 @@ public class SlideIndicatorsGroup extends LinearLayout implements OnSlideChangeL
                 @Override
                 public void onCheckedChange(boolean isChecked) {
                     super.onCheckedChange(isChecked);
-                    if (isChecked) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                            setBackground(selectedSlideIndicator);
-                        } else {
-                            setBackgroundDrawable(selectedSlideIndicator);
-                        }
-                    } else {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                            setBackground(unselectedSlideIndicator);
-                        } else {
-                            setBackgroundDrawable(unselectedSlideIndicator);
-                        }
-                    }
+                    setBackground((isChecked) ? selectedSlideIndicator : unselectedSlideIndicator);
                 }
             };
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                indicatorShape.setBackground(unselectedSlideIndicator);
-            } else {
-                indicatorShape.setBackgroundDrawable(unselectedSlideIndicator);
-            }
+            indicatorShape.setBackground(unselectedSlideIndicator);
             indicatorShapes.add(indicatorShape);
             addView(indicatorShape);
 
@@ -107,7 +91,6 @@ public class SlideIndicatorsGroup extends LinearLayout implements OnSlideChangeL
                     indicatorShapes.add(indicatorShape);
                     addView(indicatorShape);
                     break;
-
                 case IndicatorShape.CIRCLE:
                     indicatorShape = new CircleIndicator(context, indicatorSize, mustAnimateIndicators);
                     indicatorShapes.add(indicatorShape);
@@ -121,9 +104,7 @@ public class SlideIndicatorsGroup extends LinearLayout implements OnSlideChangeL
 
     public void setup() {
         setOrientation(LinearLayout.HORIZONTAL);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            setLayoutDirection(LAYOUT_DIRECTION_LTR);
-        }
+        setLayoutDirection(LAYOUT_DIRECTION_LTR);
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, indicatorSize * 2);
         layoutParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
         int margin = getResources().getDimensionPixelSize(R.dimen.default_indicator_margins) * 2;

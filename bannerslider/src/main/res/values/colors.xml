@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="default_indicator_color_selected">#eeee</color>
+    <color name="default_indicator_color_selected">#eeeeee</color>
     <color name="default_indicator_color_unselected">#66eeeeee</color>
+    <color name="default_luki_indicator_color_selected">#FFC107</color>
+    <color name="default_luki_indicator_color_unselected">#66FFC107</color>
 </resources>
